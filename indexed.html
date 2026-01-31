@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayurveda Smart Scan</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styled.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script type="module" src="apped.js"></script>
+</head>
+<body class="bg-pattern">
+    <div id="app" v-cloak>
+        <header>
+            <div class="logo-container">
+                <img src="logo.png" alt="Ayurveda Logo" class="brand-logo">
+                <h2 class="brand-text">Ayur<span>Veda</span>.AI</h2>
+            </div>
+            
+            <button v-if="!isLoggedIn" @click="showAuthModal = true" class="btn btn-primary-gold">
+                Login / Signup
+            </button>
+            
+            <div v-else class="user-profile-header">
+                <div class="user-info">
+                    <div class="user-avatar-small">
+                        <span>👤</span>
+                    </div>
+                    <span class="user-name">{{ user.name || 'Guest' }}</span>
+                </div>
+                <button @click="logout" class="btn-logout" title="Logout">
+                    ⏻
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <section v-if="currentPage === 'landing'" class="hero-section animated-fade">
+                <div class="hero-card">
+                    <div class="hero-image-col">
+                        <div class="hero-img-wrapper">
+                            <img src="meditation-illustration.png" alt="Meditation" class="hero-img">
+                        </div>
+                    </div>
+                    <div class="hero-text-col">
+                        <h1>Discover your balance. <br>Heal naturally.</h1>
+                        <p class="hero-subtitle">Combining ancient wisdom with <strong>Smart 3D Organ Scanning</strong>.</p>
+                        <div class="hero-buttons">
+                            <button @click="handleStartChatClick" class="btn btn-gold">Enter Dashboard</button>
+                            <button class="btn btn-outline">Learn More</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section v-if="currentPage === 'dashboard'" class="dashboard-section animated-fade">
+                
+                <aside class="sidebar-card">
+                    <ul class="menu-list">
+                        <li :class="{ active: currentTab === 'chat' }" @click="switchTab('chat')">
+                            💬 AI Consultation
+                        </li>
+                        <li :class="{ active: currentTab === 'model' }" @click="switchTab('model')">
+                            🫀 3D Organ Scan <span class="badge-new">LIVE</span>
+                        </li>
+                        <li :class="{ active: currentTab === 'diagnosis' }" @click="switchTab('diagnosis')">
+                            📷 AI Image Diagnosis
+                        </li>
+                        <li :class="{ active: currentTab === 'testimonials' }" @click="switchTab('testimonials')">
+                            🗣️ Testimonials
+                        </li>
+                    </ul>
+                </aside>
+
+                <div v-if="currentTab === 'chat'" class="chat-container-card">
+                    <div class="iframe-container">
+                        <iframe 
+                            src="https://huggingface.co/spaces/hjji7899/Ayurveda-Wellness-Bot" 
+                            frameborder="0"
+                            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen>
+                        </iframe>
+                        <div class="iframe-fallback">
+                            <p>Taking too long? <a href="https://huggingface.co/spaces/hjji7899/Ayurveda-Wellness-Bot" target="_blank">Click here to open Chat in new window</a></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'diagnosis'" class="chat-container-card">
+                    <div class="iframe-container">
+                        <iframe 
+                            src="https://huggingface.co/spaces/hjji7899/medical-media-analyzer" 
+                            frameborder="0"
+                            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen>
+                        </iframe>
+                        <div class="iframe-fallback">
+                            <p>Taking too long? <a href="https://huggingface.co/spaces/hjji7899/medical-media-analyzer" target="_blank">Click here to open Analyzer in new window</a></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'testimonials'" class="chat-container-card coming-soon-container">
+                    <h3>⭐ Testimonials Coming Soon!</h3>
+                    <p>We are gathering success stories from our community. Check back later.</p>
+                </div>
+
+                <div v-show="currentTab === 'model'" class="model-container-card">
+                    <div class="model-header">
+                        <h3>Interactive Bio-Scanner</h3>
+                        <p v-if="loadingModel">⏳ Aligning & Loading 3D Organs...</p>
+                        <p v-else>Select a Dosha to visualize the affected organ system.</p>
+                    </div>
+                    
+                    <div class="canvas-wrapper" id="three-canvas-container"></div>
+
+                    <div class="model-controls">
+                        <button @click="simulateDosha('vata')" :class="['btn-dosha', activeDosha === 'vata' ? 'active-vata' : '']">
+                            💨 Vata (Kidneys)
+                        </button>
+                        <button @click="simulateDosha('pitta')" :class="['btn-dosha', activeDosha === 'pitta' ? 'active-pitta' : '']">
+                            🔥 Pitta (Heart)
+                        </button>
+                        <button @click="simulateDosha('kapha')" :class="['btn-dosha', activeDosha === 'kapha' ? 'active-kapha' : '']">
+                            💧 Kapha (Brain)
+                        </button>
+                        <button @click="simulateDosha('reset')" class="btn-dosha">⚪ Reset</button>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <div v-if="showAuthModal" class="modal-overlay" @click.self="showAuthModal = false">
+            <div class="modal-card animated-pop">
+                <h2>{{ authMode === 'signup' ? 'Create Account' : 'Welcome Back' }}</h2>
+                <form @submit.prevent="handleAuthSubmit">
+                    <div class="input-group" v-if="authMode === 'signup'">
+                        <label>Full Name</label> <input type="text" v-model="authForm.name" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label> <input type="email" v-model="authForm.email" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label> <input type="password" v-model="authForm.password" required>
+                    </div>
+                    <button type="submit" class="btn btn-gold btn-full">Submit</button>
+                </form>
+                <p class="auth-switch">
+                    <a href="#" @click.prevent="toggleAuthMode">{{ authMode === 'signup' ? 'Switch to Login' : 'Switch to Signup' }}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
